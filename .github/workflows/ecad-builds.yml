@@ -32,14 +32,14 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
         with:
-          key: ecad-windows-release
+          key: ecad-windows-quick
       - name: Build
         shell: bash
         run: |
           export CRAFT_FONTS_DIR="$GITHUB_WORKSPACE/craft-fonts"
-          cargo build --release -p cadcraft -p cadcraft-cli
+          cargo build --profile quick -p cadcraft -p cadcraft-cli
           mkdir -p out/ECADCraft
-          cp target/release/cadcraft.exe target/release/cadcraft-cli.exe out/ECADCraft/
+          cp target/quick/cadcraft.exe target/quick/cadcraft-cli.exe out/ECADCraft/
           echo "${GITHUB_SHA::7}" > out/version.txt
           git log -1 --pretty='%h %ad %s' --date=format:'%d/%m/%Y %H:%M' > out/ECADCraft/version.txt
           cd out && 7z a -tzip ../ecadcraft-windows.zip ECADCraft > /dev/null
