@@ -1665,3 +1665,5 @@
 	Its attributes are the fields (CUSTOMER1, DESCRIPTION…); it replaces the sheet border.	Його атрибути є полями (CUSTOMER1, DESCRIPTION…); він замінює рамку аркуша.
 	Use on every sheet	Застосувати до всіх аркушів
 	Written into every sheet's title block. {JOBNO} in a value is replaced by that field.	Записується в основний напис кожного аркуша. {JOBNO} у значенні замінюється цим полем.
+	Electrical Demo Sheet	Демонстраційний електричний аркуш
+	Demo Sheet	Демонстраційний аркуш

@@ -3,7 +3,8 @@
 //! Runs the same [`cadcraft_ui_egui::CadApp`] as the desktop app through eframe's web runner
 //! (wgpu: WebGPU where available, WebGL2 otherwise). Build with `trunk build --release` from this
 //! directory (output in `dist/web`). URL flags: `?webgl` forces WebGL2, `?cpu` draws the drawing
-//! with egui shapes instead of the GPU canvas, `?sample` opens the sample drawing. Saving downloads
+//! with egui shapes instead of the GPU canvas, `?sample` opens the sample drawing, `?demo` the
+//! electrical demonstration sheet. Saving downloads
 //! the drawing through the browser (`download.rs`). With `?host=parent` (inside an `<iframe>`), a
 //! same-origin parent page sends the drawing to open and stores what CADCraft saves instead
 //! (`host.rs`).
@@ -137,6 +138,11 @@ mod web {
                         }
                         if query().contains("sample") {
                             let _ = app.run("ui.sample", serde_json::json!({}));
+                        }
+                        // `?demo`: the electrical demonstration sheet (parts, A3 title block).
+                        if query().contains("demo") {
+                            let _ = app.run("edemo", serde_json::json!({}));
+                            app.ui.start_tab = false;
                         }
                         // No paths on the web: OPEN asks the browser's file picker, which reads the
                         // chosen file in the background (`upload.rs`), so the picker returns none.

@@ -1,0 +1,113 @@
+# After every push to the ECAD branch: a ready-to-run Windows build on the `ecad-latest`
+# release (the laptop's "Get latest ECADCraft" downloads it, no compiling there) and the web
+# version on GitHub Pages (open <pages-url>/?demo for the electrical demo sheet).
+#
+# The web part needs GitHub Pages switched on once: Settings → Pages → Source: GitHub Actions.
+name: ECAD builds
+
+on:
+  push:
+    branches: [feature/iec-device-tagging]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: ecad-builds
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: storytold/craft-fonts
+          ref: 3d9ab3a132ed0eff457e424226a435a901da30d3
+          path: craft-fonts
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ecad-windows-release
+      - name: Build
+        shell: bash
+        run: |
+          export CRAFT_FONTS_DIR="$GITHUB_WORKSPACE/craft-fonts"
+          cargo build --release -p cadcraft -p cadcraft-cli
+          mkdir -p out/ECADCraft
+          cp target/release/cadcraft.exe target/release/cadcraft-cli.exe out/ECADCraft/
+          echo "${GITHUB_SHA::7}" > out/version.txt
+          git log -1 --pretty='%h %ad %s' --date=format:'%d/%m/%Y %H:%M' > out/ECADCraft/version.txt
+          cd out && 7z a -tzip ../ecadcraft-windows.zip ECADCraft > /dev/null
+      - name: Publish to the ecad-latest release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git tag -f ecad-latest
+          git push -f origin ecad-latest
+          notes="Latest ECADCraft for Windows, built from $(git log -1 --pretty='%h: %s'). Run Get-Latest-ECADCraft on the laptop, or download ecadcraft-windows.zip, unzip and run ECADCraft\\cadcraft.exe."
+          if gh release view ecad-latest > /dev/null 2>&1; then
+            gh release edit ecad-latest --prerelease --title "ECADCraft latest (Windows)" --notes "$notes"
+          else
+            gh release create ecad-latest --prerelease --title "ECADCraft latest (Windows)" --notes "$notes"
+          fi
+          gh release upload ecad-latest ecadcraft-windows.zip out/version.txt --clobber
+
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: storytold/craft-fonts
+          ref: 3d9ab3a132ed0eff457e424226a435a901da30d3
+          path: craft-fonts
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ecad-web
+      - name: Trunk
+        shell: bash
+        run: |
+          curl -fsSL https://github.com/trunk-rs/trunk/releases/download/v0.21.14/trunk-x86_64-unknown-linux-gnu.tar.gz | tar xz -C "$HOME/.cargo/bin" \
+            || cargo install trunk --locked
+          trunk --version
+      - name: Build the web version
+        shell: bash
+        run: |
+          export CRAFT_FONTS_DIR="$GITHUB_WORKSPACE/craft-fonts"
+          cd apps/cadcraft-web && trunk build --release
+          echo "${GITHUB_SHA::7}" > ../../dist/web/version.txt
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/web
+
+  pages:
+    needs: web
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+        continue-on-error: true
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
+        continue-on-error: true
+      - name: Where it is
+        shell: bash
+        run: |
+          if [ -n "${{ steps.deploy.outputs.page_url }}" ]; then
+            echo "::notice title=web preview::${{ steps.deploy.outputs.page_url }}?demo"
+          else
+            echo "::warning title=web preview::GitHub Pages is off: switch it on in Settings → Pages → Source: GitHub Actions, then run this workflow again."
+          fi
