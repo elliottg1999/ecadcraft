@@ -221,15 +221,19 @@ impl Interactive for PlaceM {
                     params = json!({});
                 }
                 params["at"] = json!([p.x, p.y]);
-                let r = if cmd == "eplc" { super::plc::run_plc(s, &params)? } else { super::symbols::run_esymbol(s, &params)? };
+                let r = match cmd {
+                    "eplc" => super::plc::run_plc(s, &params)?,
+                    "epart" => super::parts::run_part(s, &params)?,
+                    _ => super::symbols::run_esymbol(s, &params)?,
+                };
                 if let Some(h) = r["handle"].as_str()
                     && cmd == "esymbol"
                 {
                     s.request_ui(json!({ "dialog": "ecomponent", "handle": h }));
                 }
                 self.placed += 1;
-                // A PLC card is placed once; symbols repeat until Enter.
-                if cmd == "eplc" {
+                // A PLC card or a manufacturer part is placed once; symbols repeat until Enter.
+                if cmd == "eplc" || cmd == "epart" {
                     s.place_preset = None;
                     return Ok(Step::Done);
                 }

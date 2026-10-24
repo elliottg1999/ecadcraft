@@ -1269,6 +1269,16 @@ mod tests {
     }
 
     #[test]
+    fn placed_from_the_catalogue_with_a_click() {
+        let mut s = Session::new();
+        s.place_preset = Some(json!({ "command": "epart", "params": { "cat": "5069-L320ER", "slot": "0" }, "label": "5069-L320ER" }));
+        s.start("eplace").unwrap();
+        s.input(Input::Point(Vec2::new(20.0, 40.0))).unwrap();
+        assert!(s.running.is_none(), "placed once");
+        assert!(s.doc().unwrap().block("PLC_5069_L320ER").is_some());
+    }
+
+    #[test]
     fn command_line_form() {
         let mut s = Session::new();
         s.cmdline("epart").unwrap();
