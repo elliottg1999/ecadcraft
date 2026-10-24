@@ -12,7 +12,11 @@ New-Item -ItemType Directory -Force -Path $dir | Out-Null
 try {
     $latest = (Invoke-WebRequest -UseBasicParsing "$base/version.txt").Content.Trim()
 } catch {
-    Write-Host "Could not reach GitHub ($($_.Exception.Message))." -ForegroundColor Yellow
+    if ("$($_.Exception.Message)" -match '404') {
+        Write-Host "GitHub has no finished build yet: it is still building the latest change. Try again in a few minutes." -ForegroundColor Yellow
+    } else {
+        Write-Host "Could not reach GitHub ($($_.Exception.Message))." -ForegroundColor Yellow
+    }
     $latest = $null
 }
 $current = if (Test-Path $have) { (Get-Content $have -Raw).Trim() } else { '' }
@@ -37,7 +41,7 @@ if ($latest -and $latest -ne $current) {
 }
 
 if (-not (Test-Path $exe)) {
-    Write-Host 'ECADCraft is not downloaded yet and GitHub could not be reached.' -ForegroundColor Red
+    Write-Host 'ECADCraft is not downloaded yet: run this again once GitHub has finished building.' -ForegroundColor Red
     Read-Host 'Press Enter to close'
     exit 1
 }
